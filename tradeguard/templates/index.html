@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeGuard — Validate Before You Trade</title>
+    <style>
+        :root {
+            --bg: #0f1115;
+            --card: #181b21;
+            --border: #252a33;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --green: #22c55e;
+            --red: #ef4444;
+            --yellow: #eab308;
+            --cyan: #06b6d4;
+            --accent: #6366f1;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+        .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
+        header { text-align: center; margin-bottom: 2rem; }
+        header h1 { font-size: 2.5rem; margin: 0; letter-spacing: -1px; }
+        header p { color: var(--muted); margin-top: .5rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        .card h3 { margin: 0 0 .5rem; font-size: .875rem; text-transform: uppercase; color: var(--muted); letter-spacing: .5px; }
+        .card .big { font-size: 2rem; font-weight: 700; }
+        .green { color: var(--green); }
+        .red { color: var(--red); }
+        .yellow { color: var(--yellow); }
+        .cyan { color: var(--cyan); }
+        .pass { color: var(--green); }
+        .fail { color: var(--red); }
+        .progress-bg { background: var(--border); height: 10px; border-radius: 5px; overflow: hidden; margin-top: .5rem; }
+        .progress-fill { height: 100%; border-radius: 5px; transition: width .3s; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+        form .row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: .75rem; }
+        @media (max-width: 768px) { form .row { grid-template-columns: 1fr; } }
+        label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .25rem; }
+        input, select {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: .6rem .75rem;
+            border-radius: 8px;
+            font-size: .95rem;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--accent); }
+        button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: .75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover { opacity: .9; }
+        table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+        th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--border); font-size: .9rem; }
+        th { color: var(--muted); text-transform: uppercase; font-size: .75rem; letter-spacing: .5px; }
+        .badge {
+            display: inline-block;
+            padding: .15rem .5rem;
+            border-radius: 4px;
+            font-size: .75rem;
+            font-weight: 700;
+        }
+        .badge-pass { background: rgba(34,197,94,.15); color: var(--green); }
+        .badge-fail { background: rgba(239,68,68,.15); color: var(--red); }
+        .result-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        .result-box h2 { margin-top: 0; }
+        .score-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center; margin: 1rem 0; }
+        .score-item .score-val { font-size: 1.5rem; font-weight: 700; }
+        .score-item .score-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; }
+        .error { background: rgba(239,68,68,.1); border: 1px solid var(--red); color: var(--red); padding: 1rem; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ TradeGuard</h1>
+            <p>Validate trade setups and enforce risk discipline before every trade.</p>
+        </header>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <div class="grid">
+            <div class="card">
+                <h3>Daily Risk Used</h3>
+                <div class="big {% if budget_report and budget_report.over_budget %}red{% else %}green{% endif %}">
+                    {% if budget_report %}${{ "%.2f" | format(budget_report.used|float) }}{% else %}—{% endif %}
+                </div>
+                <div class="progress-bg">
+                    <div class="progress-fill" style="width: {{ budget_report.pct_used|default(0) }}%; background: {% if budget_report and budget_report.over_budget %}var(--red){% else %}var(--green){% endif %}"></div>
+                </div>
+                <div style="margin-top:.4rem;font-size:.8rem;color:var(--muted)">
+                    {% if budget_report %}{{ "%.1f" | format(budget_report.pct_used|float) }}% of ${{ "%.2f" | format(budget_report.budget|float) }}{% endif %}
+                </div>
+            </div>
+            <div class="card">
+                <h3>Remaining Budget</h3>
+                <div class="big cyan">
+                    {% if budget_report %}${{ "%.2f" | format(budget_report.remaining|float) }}{% else %}—{% endif %}
+                </div>
+            </div>
+            <div class="card">
+                <h3>Pass Rate</h3>
+                <div class="big {% if pass_rate >= 50 %}green{% else %}red{% endif %}">{{ pass_rate|default(0) }}%</div>
+                <div style="font-size:.8rem;color:var(--muted)">{{ passed_count|default(0) }} / {{ history_count|default(0) }} setups</div>
+            </div>
+            <div class="card">
+                <h3>Saved Plans</h3>
+                <div class="big">{{ plans_count|default(0) }}</div>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div>
+                <div class="card">
+                    <h3 style="margin-bottom:1rem">New Setup Validation</h3>
+                    <form action="/validate" method="post">
+                        <div class="row">
+                            <div>
+                                <label>Symbol</label>
+                                <input type="text" name="symbol" placeholder="AAPL" required>
+                            </div>
+                            <div>
+                                <label>Direction</label>
+                                <select name="direction">
+                                    <option value="long">Long</option>
+                                    <option value="short">Short</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div><label>Entry</label><input type="number" step="0.01" name="entry" required></div>
+                            <div><label>Stop</label><input type="number" step="0.01" name="stop" required></div>
+                        </div>
+                        <div class="row">
+                            <div><label>Target</label><input type="number" step="0.01" name="target" required></div>
+                            <div><label>Correlated Symbols</label><input type="text" name="correlated_symbols" placeholder="MSFT, GOOGL"></div>
+                        </div>
+                        <div class="row">
+                            <div><label>Trend (0-25)</label><input type="number" min="0" max="25" name="trend_score" value="20" required></div>
+                            <div><label>S/R (0-25)</label><input type="number" min="0" max="25" name="sr_score" value="18" required></div>
+                        </div>
+                        <div class="row">
+                            <div><label>Confluence (0-25)</label><input type="number" min="0" max="25" name="confluence_score" value="15" required></div>
+                            <div><label>Timing (0-25)</label><input type="number" min="0" max="25" name="timing_score" value="20" required></div>
+                        </div>
+                        <button type="submit">Validate Setup</button>
+                    </form>
+                </div>
+            </div>
+
+            <div>
+                {% if result %}
+                <div class="result-box">
+                    <h2 class="{% if result.passed %}pass{% else %}fail{% endif %}">
+                        {% if result.passed %}✅ PASS{% else %}❌ FAIL{% endif %}
+                        — {{ setup.symbol }} {{ result.grade.value }} ({{ result.score }}/100)
+                    </h2>
+                    <div class="score-grid">
+                        <div class="score-item">
+                            <div class="score-val">{{ result.component_scores.trend }}</div>
+                            <div class="score-label">Trend</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-val">{{ result.component_scores.sr }}</div>
+                            <div class="score-label">S/R</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-val">{{ result.component_scores.confluence }}</div>
+                            <div class="score-label">Confluence</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-val">{{ result.component_scores.timing }}</div>
+                            <div class="score-label">Timing</div>
+                        </div>
+                    </div>
+                    <p><strong>R:R:</strong> {{ "%.2f" | format(result.rr|float) }}</p>
+                    {% if plan %}
+                    <p><strong>Position Size:</strong> {{ "%.4f" | format(plan.position_size|float) }}</p>
+                    <p><strong>Dollar Risk:</strong> <span class="red">${{ "%.2f" | format(plan.dollar_risk|float) }}</span></p>
+                    <p><strong>Dollar Reward:</strong> <span class="green">${{ "%.2f" | format(plan.dollar_reward|float) }}</span></p>
+                    <p><strong>Daily Used After:</strong> ${{ "%.2f" | format(plan.daily_risk_used_after|float) }}</p>
+                    {% endif %}
+                    <ul>
+                        {% for reason in result.reasons %}<li>{{ reason }}</li>{% endfor %}
+                    </ul>
+                    {% if result.warnings %}
+                    <p class="yellow"><strong>Warnings:</strong></p>
+                    <ul>
+                        {% for w in result.warnings %}<li class="yellow">{{ w }}</li>{% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="card">
+                    <h3>Recent Validations</h3>
+                    {% if recent %}
+                    <table>
+                        <tr><th>Time</th><th>Symbol</th><th>Grade</th><th>Result</th></tr>
+                        {% for r in recent %}
+                        <tr>
+                            <td>{{ r.evaluated_at.strftime("%H:%M") if r.evaluated_at else "—" }}</td>
+                            <td>{{ r.symbol }}</td>
+                            <td>{{ r.grade.value }}</td>
+                            <td><span class="badge {% if r.passed %}badge-pass{% else %}badge-fail{% endif %}">{% if r.passed %}PASS{% else %}FAIL{% endif %}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    {% else %}
+                    <p style="color:var(--muted)">No validations yet. Submit your first setup above.</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

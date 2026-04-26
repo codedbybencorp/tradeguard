@@ -1,0 +1,33 @@
+services:
+  web:
+    build: .
+    container_name: tradeguard-web
+    ports:
+      - "8000:8000"
+    volumes:
+      - tradeguard-data:/data
+    environment:
+      - TRADEGUARD_HOME=/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  cli:
+    build: .
+    container_name: tradeguard-cli
+    profiles: ["cli"]
+    volumes:
+      - tradeguard-data:/data
+    environment:
+      - TRADEGUARD_HOME=/data
+    stdin_open: true
+    tty: true
+    entrypoint: ["tradeguard"]
+    command: ["--help"]
+
+volumes:
+  tradeguard-data:

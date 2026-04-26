@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tradeguard"
+version = "0.1.0"
+description = "Validate trade setups and enforce risk discipline before every trade."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "TradeGuard Team" }]
+dependencies = [
+    "pydantic>=2.0",
+    "rich>=13.0",
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+    "jinja2>=3.0",
+    "typer>=0.9",
+    "python-multipart>=0.0.6",
+    "gunicorn>=21.0",
+    "pytest>=7.0",
+    "httpx>=0.24",
+]
+
+[project.scripts]
+tradeguard = "tradeguard.cli:main"
+tradeguard-web = "tradeguard.web_server:main"
+
+[tool.setuptools.packages.find]
+include = ["tradeguard*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+tradeguard = ["templates/*.html", "static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
